@@ -7,33 +7,33 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-white text-blue-950 min-h-screen flex items-center justify-center p-4 overflow-x-hidden">
 
-    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-700">
+    <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-lg border border-blue-100 overflow-hidden">
         
         <div id="vista-formulario">
             <div class="text-center mb-8">
-                <h1 class="text-2xl font-bold text-blue-400 tracking-wide uppercase">Control de Bioseguridad</h1>
-                <p class="text-gray-400 text-sm mt-1">Registro obligatorio de ingreso a instalaciones</p>
+                <h1 class="text-2xl font-bold text-blue-600 tracking-wide uppercase">Control de Bioseguridad</h1>
+                <p class="text-blue-500 text-sm mt-1 font-medium">Registro obligatorio de ingreso a instalaciones</p>
             </div>
 
             <form id="formBioseguridad" class="space-y-5">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Piscicultura / Unidad Destino</label>
+                    <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Piscicultura / Unidad Destino</label>
                     <input type="text" id="centro" name="centro" readonly 
-                        class="w-full bg-gray-950 border border-gray-700 text-blue-300 px-4 py-3 rounded-xl font-bold focus:outline-none cursor-not-allowed">
+                        class="w-full bg-blue-50 border border-blue-100 text-blue-600 px-4 py-3 rounded-xl font-bold focus:outline-none cursor-not-allowed">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Nombre Completo</label>
+                        <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Nombre Completo</label>
                         <input type="text" id="nombre_completo" name="nombre_completo" required 
-                            class="w-full bg-gray-700 border border-gray-600 px-4 py-2.5 rounded-xl text-white focus:border-blue-500 focus:outline-none">
+                            class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tipo Identificación</label>
+                        <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Tipo Identificación</label>
                         <select id="tipo_identificacion" name="tipo_identificacion" required 
-                            class="w-full bg-gray-700 border border-gray-600 px-4 py-2.5 rounded-xl text-white focus:border-blue-500 focus:outline-none">
+                            class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none">
                             <option value="RUT">RUT</option>
                             <option value="Pasaporte">Pasaporte</option>
                         </select>
@@ -42,48 +42,48 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">RUT / Documento</label>
+                        <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">RUT / Documento</label>
                         <input type="text" id="rut" name="rut" required 
-                            class="w-full bg-gray-700 border border-gray-600 px-4 py-2.5 rounded-xl text-white focus:border-blue-500 focus:outline-none">
+                            class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Correo Electrónico</label>
+                        <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Correo Electrónico</label>
                         <input type="email" id="email" name="email" required 
-                            class="w-full bg-gray-700 border border-gray-600 px-4 py-2.5 rounded-xl text-white focus:border-blue-500 focus:outline-none">
+                            class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Empresa a la que pertenece</label>
+                    <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Empresa a la que pertenece</label>
                     <select id="empresa" name="empresa" required onchange="manejarFlujoEmpresa()"
-                        class="w-full bg-gray-700 border border-gray-600 px-4 py-2.5 rounded-xl text-white focus:border-blue-500 focus:outline-none font-medium">
+                        class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none font-medium">
                         <option value="Invermar">Invermar</option>
                         <option value="Externa">Empresa Contratista / Externa</option>
                     </select>
                 </div>
 
-                <div id="bloque_ultimo_ingreso" class="bg-gray-900/50 p-4 rounded-xl border border-gray-700 space-y-4">
+                <div id="bloque_ultimo_ingreso" class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
                     <div id="wrapper_centro_externo" class="hidden">
-                        <label class="block text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">Nombre de Piscicultura / Centro Mar Externo</label>
+                        <label class="block text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Nombre de Piscicultura / Centro Mar Externo</label>
                         <input type="text" id="centro_procedencia" name="centro_procedencia" 
-                            class="w-full bg-gray-700 border border-gray-600 px-4 py-2.5 rounded-xl text-white focus:border-blue-500 focus:outline-none">
+                            class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none">
                     </div>
 
                     <div>
-                        <label id="label_fecha" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        <label id="label_fecha" class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
                             Último ingreso a centro de mar Invermar
                         </label>
                         <div id="wrapper_no_aplica" class="flex items-center mb-3">
-                            <input type='checkbox' id='no_aplica_fecha' onchange='manejarCheckboxFecha()' class='w-4 h-4 bg-gray-700 border-gray-600 rounded text-blue-500'>
-                            <label for='no_aplica_fecha' class='ml-2 text-sm text-gray-300 cursor-pointer select-none'>No recuerdo / No aplica (Sin visitas recientes)</label>
+                            <input type='checkbox' id='no_aplica_fecha' onchange='manejarCheckboxFecha()' class='w-4 h-4 bg-white border-blue-300 rounded text-blue-600 focus:ring-blue-500'>
+                            <label for='no_aplica_fecha' class='ml-2 text-sm text-blue-700 cursor-pointer select-none font-medium'>No recuerdo / No aplica (Sin visitas recientes)</label>
                         </div>
                         <input type="date" id="ultimo_ingreso_fecha" name="ultimo_ingreso_fecha" required
-                            class="w-full bg-gray-700 border border-gray-600 px-4 py-2.5 rounded-xl text-white focus:border-blue-500 focus:outline-none">
+                            class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none">
                     </div>
                 </div>
 
                 <button type="submit" 
-                    class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition duration-150 tracking-wide uppercase text-sm mt-4 shadow-lg">
+                    class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl transition duration-150 tracking-wide uppercase text-sm mt-4 shadow-md">
                     Enviar Declaración Sanitaria
                 </button>
             </form>
@@ -93,12 +93,12 @@
             <div id="icono-resultado" class="flex justify-center"></div>
             <div>
                 <h2 id="titulo-resultado" class="text-2xl font-bold tracking-wide uppercase"></h2>
-                <p id="subtitulo-centro" class="text-blue-400 font-semibold mt-1 text-sm uppercase"></p>
+                <p id="subtitulo-centro" class="text-blue-600 font-semibold mt-1 text-sm uppercase"></p>
             </div>
-            <div class="bg-gray-900/60 p-5 rounded-xl border border-gray-700 text-left">
-                <p id="mensaje-resultado" class="text-gray-300 text-sm leading-relaxed font-medium"></p>
+            <div class="bg-blue-50/50 p-5 rounded-xl border border-blue-100 text-left">
+                <p id="mensaje-resultado" class="text-blue-900 text-sm leading-relaxed font-medium"></p>
             </div>
-            <p class="text-xs text-gray-500 italic">Esta ventana no permite nuevos ingresos de datos.</p>
+            <p class="text-xs text-blue-400 italic font-medium">Esta ventana no permite nuevos ingresos de datos.</p>
         </div>
 
     </div>
@@ -116,11 +116,11 @@
                 document.getElementById('centro').value = "Centro No Identificado";
                 Swal.fire({
                     icon: 'warning',
-                    title: 'QR Inválido o Sin Parámetro',
-                    text: 'Por favor, escanee un código QR autorizado de la instalación.',
-                    confirmButtonColor: '#3b82f6',
-                    background: '#1f2937',
-                    color: '#fff'
+                    title: 'QR Inválido',
+                    text: 'Por favor, escanee un código QR autorizado.',
+                    confirmButtonColor: '#2563eb',
+                    background: '#fff',
+                    color: '#1e293b'
                 });
             }
             manejarFlujoEmpresa();
@@ -179,21 +179,21 @@
 
             const iconoContenedor = document.getElementById('icono-resultado');
             if (esExitoso) {
-                document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-green-400";
+                document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-green-600";
                 iconoContenedor.innerHTML = `
-                    <div class="bg-green-500/10 p-4 rounded-full border border-green-500/30">
-                        <svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <div class="bg-green-50 p-4 rounded-full border border-green-200">
+                        <svg class="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     </div>`;
             } else {
-                document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-red-500";
+                document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-red-600";
                 iconoContenedor.innerHTML = `
-                    <div class="bg-red-500/10 p-4 rounded-full border border-red-500/30">
-                        <svg class="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <div class="bg-red-50 p-4 rounded-full border border-red-200">
+                        <svg class="w-16 h-16 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </div>`;
             }
         }
 
-        // 🚀 ENVÍO E INTERPRETACIÓN DE LA DECISIÓN DEL BACKEND
+        // 🚀 ENVÍO E INTERPRETACIÓN
         document.getElementById('formBioseguridad').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -213,8 +213,8 @@
                 text: 'Espere un momento por favor.',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
-                background: '#1f2937',
-                color: '#fff'
+                background: '#fff',
+                color: '#1e293b'
             });
 
             try {
@@ -227,30 +227,26 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Cambiar la vista de fondo inmediatamente
                     mostrarPantallaFinal(true, "Acceso Autorizado", data.message);
 
-                    // Dejar la alerta informativa encima
                     Swal.fire({
                         icon: 'success',
-                        title: '<span class="text-green-400">ACCESO AUTORIZADO</span>',
-                        html: `<p class="text-gray-300 text-sm">${data.message}</p>`,
-                        confirmButtonColor: '#10b981',
-                        background: '#1f2937',
-                        color: '#fff'
+                        title: '<span class="text-green-600">ACCESO AUTORIZADO</span>',
+                        html: `<p class="text-blue-900 text-sm">${data.message}</p>`,
+                        confirmButtonColor: '#2563eb',
+                        background: '#fff',
+                        color: '#1e293b'
                     });
                 } else if (response.status === 403) {
-                    // Cambiar la vista de fondo inmediatamente
                     mostrarPantallaFinal(false, "Acceso Restringido", data.detail);
 
-                    // Dejar la alerta informativa encima
                     Swal.fire({
                         icon: 'error',
-                        title: '<span class="text-red-500">ACCESO RESTRINGIDO</span>',
-                        html: `<p class="text-gray-300 text-sm">${data.detail}</p>`,
+                        title: '<span class="text-red-600">ACCESO RESTRINGIDO</span>',
+                        html: `<p class="text-blue-900 text-sm">${data.detail}</p>`,
                         confirmButtonColor: '#ef4444',
-                        background: '#1f2937',
-                        color: '#fff'
+                        background: '#fff',
+                        color: '#1e293b'
                     });
                 } else {
                     Swal.fire({
@@ -258,8 +254,8 @@
                         title: 'Validación de Formulario',
                         text: data.detail || 'Ocurrió un error inesperado.',
                         confirmButtonColor: '#f59e0b',
-                        background: '#1f2937',
-                        color: '#fff'
+                        background: '#fff',
+                        color: '#1e293b'
                     });
                 }
             } catch (error) {
@@ -268,8 +264,8 @@
                     title: 'Error de Red',
                     text: 'No se pudo conectar con el servidor central de bioseguridad.',
                     confirmButtonColor: '#ef4444',
-                    background: '#1f2937',
-                    color: '#fff'
+                    background: '#fff',
+                    color: '#1e293b'
                 });
             }
         });
