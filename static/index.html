@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Bioseguridad</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 500px; background: white; padding: 30px; margin: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        label { display: block; margin: 10px 0 5px; color: #666; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #2b6cb0; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #2c5282; }
+        #mensaje { text-align: center; font-weight: bold; margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Ingreso de Bioseguridad 🐟</h2>
+    <form id="formularioRegistro">
+        <label for="fecha">Fecha de Ingreso</label>
+        <input type="date" id="fecha" required>
+
+        <label for="nombre_completo">Nombre Completo</label>
+        <input type="text" id="nombre_completo" placeholder="Ej. Juan Pérez" required>
+
+        <label for="tipo_identificacion">Tipo de Identificación</label>
+        <select id="tipo_identificacion" required>
+            <option value="">Seleccione...</option>
+            <option value="RUT">RUT</option>
+            <option value="Pasaporte">Pasaporte</option>
+        </select>
+
+        <label for="rut">Número de Identificación (RUT/Pasaporte)</label>
+        <input type="text" id="rut" placeholder="Ej. 12345678-9" required>
+
+        <label for="email">Correo Electrónico</label>
+        <input type="email" id="email" placeholder="ejemplo@correo.com" required>
+
+        <button type="submit">Registrar Ingreso</button>
+    </form>
+    <div id="mensaje"></div>
+</div>
+
+<script>
+    document.getElementById('formularioRegistro').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const mensajeDiv = document.getElementById('mensaje');
+        
+        // Estructuramos los datos exactamente como los pide nuestra API de FastAPI
+        const datos = {
+            fecha: document.getElementById('fecha').value,
+            nombre_completo: document.getElementById('nombre_completo').value,
+            tipo_identificacion: document.getElementById('tipo_identificacion').value,
+            rut: document.getElementById('rut').value,
+            email: document.getElementById('email').value
+        };
+
+        try {
+            const respuesta = await fetch('/registro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+
+            const resultado = await respuesta.json();
+
+            if (respuesta.ok) {
+                mensajeDiv.style.backgroundColor = '#c6f6d5';
+                mensajeDiv.style.color = '#22543d';
+                mensajeDiv.innerText = "✅ " + resultado.estado;
+                document.getElementById('formularioRegistro').reset();
+            } else {
+                mensajeDiv.style.backgroundColor = '#fed7d7';
+                mensajeDiv.style.color = '#742a2a';
+                mensajeDiv.innerText = "❌ Error: " + (resultado.detail || "No se pudo registrar");
+            }
+        } catch (error) {
+            mensajeDiv.style.backgroundColor = '#fed7d7';
+            mensajeDiv.style.color = '#742a2a';
+            mensajeDiv.innerText = "❌ No hay conexión con el servidor";
+        }
+        
+        mensajeDiv.style.display = 'block';
+    });
+</script>
+
+</body>
+</html>
