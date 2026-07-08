@@ -6,7 +6,7 @@
     <title>Control de Acceso - Bioseguridad Invermar</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <style>
         html, body {
             overflow-x: hidden !important;
@@ -17,12 +17,24 @@
             overflow-x: hidden !important;
             padding-right: 0 !important;
         }
+
+        /* --- FIX: input type="date" desbordándose en iOS/Safari --- */
+        input[type="date"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            margin-left: 4px;
+        }
     </style>
 </head>
 <body class="bg-white text-blue-950 min-h-screen flex items-center justify-center p-4 overflow-x-hidden">
 
     <div class="bg-white p-5 sm:p-8 rounded-2xl shadow-xl w-full max-w-md mx-auto border border-blue-100 overflow-hidden box-border">
-        
+
         <div id="vista-formulario" class="w-full overflow-hidden">
             <div class="text-center mb-8">
                 <h1 class="text-2xl font-bold text-blue-600 tracking-wide uppercase">Control de Bioseguridad</h1>
@@ -81,7 +93,7 @@
                             class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
                     </div>
 
-                    <div class="w-full">
+                    <div class="w-full min-w-0">
                         <label id="label_fecha" class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
                             Último ingreso a centro de mar Invermar
                         </label>
@@ -90,7 +102,7 @@
                             <label for='no_aplica_fecha' class='ml-2 text-sm text-blue-700 cursor-pointer select-none font-medium'>No recuerdo / No aplica (Sin visitas recientes)</label>
                         </div>
                         <input type="date" id="ultimo_ingreso_fecha" name="ultimo_ingreso_fecha" required
-                            class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
+                            class="w-full min-w-0 bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
                     </div>
                 </div>
 
@@ -121,7 +133,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             const parametros = new URLSearchParams(window.location.search);
             const centroDetectado = parametros.get('centro');
-            
+
             if (centroDetectado) {
                 document.getElementById('centro').value = centroDetectado;
             } else {
@@ -167,7 +179,7 @@
         function manejarCheckboxFecha() {
             const checkbox = document.getElementById('no_aplica_fecha');
             const fechaInput = document.getElementById('ultimo_ingreso_fecha');
-            
+
             if (checkbox.checked) {
                 fechaInput.value = "";
                 fechaInput.disabled = true;
@@ -180,7 +192,7 @@
 
         function mostrarPantallaFinal(esExitoso, titulo, mensaje) {
             const centroActual = document.getElementById('centro').value;
-            
+
             document.getElementById('vista-formulario').classList.add('hidden');
             const vistaFinal = document.getElementById('vista-final');
             vistaFinal.classList.remove('hidden');
