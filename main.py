@@ -22,10 +22,12 @@ app = FastAPI(title="Sistema de Bioseguridad Piscicultura")
 # --- NUEVO: Configuración de CORS para desbloquear la conexión ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite que la web se conecte desde cualquier dirección (como Render)
+    allow_origins=[
+        "https://sistema-bioseguridad.onrender.com"  # Solo tu web oficial puede conectarse
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos los métodos (POST, GET, etc.)
-    allow_headers=["*"],  # Permite todas las cabeceras
+    allow_methods=["POST"],  # Solo permitimos el envío de datos
+    allow_headers=["*"],
 )
 # -----------------------------------------------------------------
 
