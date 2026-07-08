@@ -70,7 +70,7 @@ async def registrar_ingreso(datos: RegistroIngreso):
             dias_transcurridos = (fecha_actual - fecha_visita).days
             
             # REGLA: Si ingresó a un centro hace menos de 2 días -> Acceso Restringido
-            if dias_transcurridos < 2:
+            if dias_transcurridos <= 2:
                 estado_acceso = "Acceso restringido"
                 if es_invermar:
                     motivo_bloqueo = f"Incumple carencia de 2 días. Último ingreso a centro Invermar hace {dias_transcurridos} días."
