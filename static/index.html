@@ -2,10 +2,23 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Control de Acceso - Bioseguridad Invermar</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        html, body {
+            overflow-x: hidden !important;
+            width: 100% !important;
+            position: relative;
+        }
+        /* Forzar a SweetAlert a no romper el ancho del cuerpo */
+        body.swal2-shown {
+            overflow-x: hidden !important;
+            padding-right: 0 !important;
+        }
+    </style>
 </head>
 <body class="bg-white text-blue-950 min-h-screen flex items-center justify-center p-4 overflow-x-hidden">
 
