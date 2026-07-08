@@ -80,7 +80,10 @@ async def registrar_ingreso(datos: RegistroIngreso):
         except ValueError:
             raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD.")
 
-    # 3. 🗄️ PREPARAR PAQUETE PARA SUPABASE (Auditable al 100%)
+    # 3. 🗄️ PREPARAR PAQUETE PARA SUPABASE (Alineado con las columnas de la BD)
+    # Si la fecha viene vacía (No recuerda), usamos una fecha antigua para evitar el error de BD
+    fecha_registro = datos.ultimo_ingreso_fecha if datos.ultimo_ingreso_fecha else "2000-01-01"
+
     payload = {
         "piscicultura": datos.centro,
         "nombre_completo": datos.nombre_completo,
@@ -88,7 +91,7 @@ async def registrar_ingreso(datos: RegistroIngreso):
         "rut": datos.rut,
         "email": datos.email,
         "empresa": datos.empresa,
-        "ultimo_ingreso_fecha": datos.ultimo_ingreso_fecha if datos.ultimo_ingreso_fecha else None,
+        "fecha": fecha_registro,  # Columna corregida a 'fecha'
         "centro_procedencia": datos.centro_procedencia if not es_invermar else None,
         "estado_acceso": estado_acceso,
         "motivo_bloqueo": motivo_bloqueo
