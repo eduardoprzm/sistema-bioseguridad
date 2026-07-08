@@ -4,10 +4,11 @@ from datetime import date
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
-# Importamos el módulo necesario para manejar archivos estáticos
 from fastapi.staticfiles import StaticFiles
+# Importamos el módulo de seguridad CORS
+from fastapi.middleware.cors import CORSMiddleware
 
-# 1. Cargamos las credenciales secretas del archivo .env
+# 1. Cargamos las credenciales secretas
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -17,6 +18,16 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = FastAPI(title="Sistema de Bioseguridad Piscicultura")
+
+# --- NUEVO: Configuración de CORS para desbloquear la conexión ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite que la web se conecte desde cualquier dirección (como Render)
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos los métodos (POST, GET, etc.)
+    allow_headers=["*"],  # Permite todas las cabeceras
+)
+# -----------------------------------------------------------------
 
 class RegistroIngreso(BaseModel):
     fecha: date
@@ -28,13 +39,9 @@ class RegistroIngreso(BaseModel):
 @app.post("/registro")
 def crear_registro(datos: RegistroIngreso):
     try:
-        # Convertimos los datos a un diccionario para Supabase
         nuevo_ingreso = datos.model_dump()
-        
-        # Convertimos la fecha a texto para evitar problemas de formato
         nuevo_ingreso["fecha"] = str(nuevo_ingreso["fecha"])
         
-        # Insertamos los datos en la tabla de Supabase
         respuesta = supabase.table("registros_bioseguridad").insert(nuevo_ingreso).execute()
         
         return {
@@ -45,5 +52,5 @@ def crear_registro(datos: RegistroIngreso):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al conectar con Supabase: {str(e)}")
 
-# 3. Montamos la carpeta 'static' para servir el archivo index.html en la raíz
+# 3. Montamos la carpeta 'static' en la raíz
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
