@@ -90,8 +90,7 @@
         </div>
 
         <div id="vista-final" class="hidden text-center py-6 space-y-6">
-            <div id="icono-resultado" class="flex justify-center">
-                </div>
+            <div id="icono-resultado" class="flex justify-center"></div>
             <div>
                 <h2 id="titulo-resultado" class="text-2xl font-bold tracking-wide uppercase"></h2>
                 <p id="subtitulo-centro" class="text-blue-400 font-semibold mt-1 text-sm uppercase"></p>
@@ -167,30 +166,26 @@
             }
         }
 
-        // FUNCIÓN PARA CAMBIAR DE VISTA Y MOSTRAR RESULTADO DEFINITIVO
         function mostrarPantallaFinal(esExitoso, titulo, mensaje) {
             const centroActual = document.getElementById('centro').value;
             
-            // Ocultar formulario y mostrar panel final
             document.getElementById('vista-formulario').classList.add('hidden');
             const vistaFinal = document.getElementById('vista-final');
             vistaFinal.classList.remove('hidden');
 
-            // Setear textos
             document.getElementById('titulo-resultado').innerHTML = titulo;
             document.getElementById('subtitulo-centro').innerText = `Instalación: ${centroActual}`;
             document.getElementById('mensaje-resultado').innerText = mensaje;
 
-            // Inyectar icono Tailwind representativo
             const iconoContenedor = document.getElementById('icono-resultado');
             if (esExitoso) {
-                document.getElementById('titulo-resultado').classList.add('text-green-400');
+                document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-green-400";
                 iconoContenedor.innerHTML = `
                     <div class="bg-green-500/10 p-4 rounded-full border border-green-500/30">
                         <svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     </div>`;
             } else {
-                document.getElementById('titulo-resultado').classList.add('text-red-500');
+                document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-red-500";
                 iconoContenedor.innerHTML = `
                     <div class="bg-red-500/10 p-4 rounded-full border border-red-500/30">
                         <svg class="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -232,6 +227,10 @@
                 const data = await response.json();
 
                 if (response.ok) {
+                    // Cambiar la vista de fondo inmediatamente
+                    mostrarPantallaFinal(true, "Acceso Autorizado", data.message);
+
+                    // Dejar la alerta informativa encima
                     Swal.fire({
                         icon: 'success',
                         title: '<span class="text-green-400">ACCESO AUTORIZADO</span>',
@@ -239,10 +238,12 @@
                         confirmButtonColor: '#10b981',
                         background: '#1f2937',
                         color: '#fff'
-                    }).then(() => {
-                        mostrarPantallaFinal(true, "Acceso Autorizado", data.message);
                     });
                 } else if (response.status === 403) {
+                    // Cambiar la vista de fondo inmediatamente
+                    mostrarPantallaFinal(false, "Acceso Restringido", data.detail);
+
+                    // Dejar la alerta informativa encima
                     Swal.fire({
                         icon: 'error',
                         title: '<span class="text-red-500">ACCESO RESTRINGIDO</span>',
@@ -250,8 +251,6 @@
                         confirmButtonColor: '#ef4444',
                         background: '#1f2937',
                         color: '#fff'
-                    }).then(() => {
-                        mostrarPantallaFinal(false, "Acceso Restringido", data.detail);
                     });
                 } else {
                     Swal.fire({
