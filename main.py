@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date, datetime
@@ -8,12 +10,21 @@ from supabase import create_client, Client
 
 app = FastAPI()
 
+# --- CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS Y RUTA RAÍZ ---
+# Vincula la carpeta 'static' para que el servidor pueda leer el HTML, CSS o JS
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+async def servir_formulario():
+    # Devuelve el archivo index.html cuando entras a la URL principal
+    return FileResponse("static/index.html")
+
 # --- CONFIGURACIÓN DE CORS PROTEGIDA ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://sistema-bioseguridad.onrender.com"],
     allow_credentials=True,
-    allow_methods=["POST"],
+    allow_methods=["*", "POST"],
     allow_headers=["*"],
 )
 
@@ -35,21 +46,21 @@ class RegistroIngreso(BaseModel):
 
 @app.post("/api/registro")
 async def registrar_ingreso(datos: RegistroIngreso):
-    # Por defecto, el acceso es autorizado [cite: 49]
+    # Por defecto, el acceso es autorizado
     estado_acceso = "Acceso autorizado"
     motivo_bloqueo = None
     
-    # 1. 🏭 VALIDACIÓN INICIAL: Lógica condicional según tipo de Empresa [cite: 37]
+    # 1. 🏭 VALIDACIÓN INICIAL: Lógica condicional según tipo de Empresa
     es_invermar = datos.empresa.lower() == "invermar"
     
     if not es_invermar:
-        # Si es empresa externa, centro_procedencia y fecha son OBLIGATORIOS [cite: 45, 46, 88]
+        # Si es empresa externa, centro_procedencia y fecha son OBLIGATORIOS
         if not datos.centro_procedencia or not datos.centro_procedencia.strip():
             raise HTTPException(status_code=400, detail="El nombre del centro externo es obligatorio para contratistas.")
         if not datos.ultimo_ingreso_fecha:
             raise HTTPException(status_code=400, detail="La fecha de último ingreso es obligatoria para contratistas.")
 
-    # 2. 🧠 MOTOR DE DECISIÓN SANITARIA (Regla de los 2 días) [cite: 74, 75]
+    # 2. 🧠 MOTOR DE DECISIÓN SANITARIA (Regla de los 2 días)
     if datos.ultimo_ingreso_fecha:
         try:
             # Convertir texto a fecha para calcular la carencia
@@ -58,7 +69,7 @@ async def registrar_ingreso(datos: RegistroIngreso):
             
             dias_transcurridos = (fecha_actual - fecha_visita).days
             
-            # REGLA: Si ingresó a un centro hace menos de 2 días -> Acceso Restringido [cite: 50, 75]
+            # REGLA: Si ingresó a un centro hace menos de 2 días -> Acceso Restringido
             if dias_transcurridos < 2:
                 estado_acceso = "Acceso restringido"
                 if es_invermar:
@@ -84,19 +95,19 @@ async def registrar_ingreso(datos: RegistroIngreso):
     }
 
     try:
-        # Guardar el intento (tanto aprobado como restringido) [cite: 78, 79]
+        # Guardar el intento (tanto aprobado como restringido)
         supabase.table("registros_bioseguridad").insert(payload).execute()
         
-        # 4. 🚨 RESPUESTA AL FRONTEND SEGÚN LA NORMATIVA [cite: 48]
+        # 4. 🚨 RESPUESTA AL FRONTEND SEGÚN LA NORMATIVA
         if estado_acceso == "Acceso restringido":
             raise HTTPException(
                 status_code=403, 
-                detail="Acceso restringido: Se prohíbe el acceso a las unidades productivas. El tránsito se limita exclusivamente a las oficinas. Su visita será guiada." [cite: 56]
+                detail="Acceso restringido: Se prohíbe el acceso a las unidades productivas. El tránsito se limita exclusivamente a las oficinas. Su visita será guiada."
             )
             
         return {
             "status": "success", 
-            "message": "Acceso autorizado. Su visita será guiada por el Jefe de Centro o por el encargado." [cite: 53]
+            "message": "Acceso autorizado. Su visita será guiada por el Jefe de Centro o por el encargado."
         }
         
     except HTTPException as http_err:
