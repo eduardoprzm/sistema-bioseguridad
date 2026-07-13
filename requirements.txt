@@ -2,3 +2,4 @@ fastapi
 python-dotenv
 supabase
 uvicorn
+pydantic[email]
