@@ -380,7 +380,7 @@ async def registrar_ingreso(datos: RegistroIngreso):
                     "message": (
                         "Su ingreso requiere autorización del encargado de centro debido a un "
                         "movimiento reciente entre centros. Se ha notificado al jefe de centro. "
-                        "Por favor espere confirmación y vuelva a escanear el código QR."
+                        "Por favor espere instrucciones del encargado de centro."
                     ),
                 },
             )
@@ -476,7 +476,8 @@ async def aprobar_ingreso(registro_id: int, token: str):
     return _pagina_html(
         "✅ Ingreso aprobado",
         f"Se autorizó el ingreso de {registro['nombre_completo']} a '{registro['piscicultura']}'. "
-        "La persona debe volver a escanear el código QR para completar su registro.",
+        "No es necesario que la persona vuelva a escanear el código QR: el registro ya quedó "
+        "actualizado en el sistema. Puede indicarle que continúe con su ingreso.",
         "#16a34a",
     )
 
