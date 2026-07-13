@@ -18,6 +18,14 @@
             padding-right: 0 !important;
         }
 
+        /* Fondo con patrón de la empresa, en mosaico */
+        body {
+            background-image: url('fondo.jpg');
+            background-repeat: repeat;
+            background-size: 480px auto;
+            background-color: #f0f4f8;
+        }
+
         /* --- FIX: input type="date" desbordándose en iOS/Safari --- */
         input[type="date"] {
             -webkit-appearance: none;
@@ -31,12 +39,13 @@
         }
     </style>
 </head>
-<body class="bg-white text-blue-950 min-h-screen flex items-center justify-center p-4 overflow-x-hidden">
+<body class="text-blue-950 min-h-screen flex items-center justify-center p-4 overflow-x-hidden">
 
     <div class="bg-white p-5 sm:p-8 rounded-2xl shadow-xl w-full max-w-md mx-auto border border-blue-100 overflow-hidden box-border">
 
         <div id="vista-formulario" class="w-full overflow-hidden">
             <div class="text-center mb-8">
+                <img src="logo.png" alt="Invermar" class="h-8 mx-auto mb-4">
                 <h1 class="text-2xl font-bold text-blue-600 tracking-wide uppercase">Control de Bioseguridad</h1>
                 <p class="text-blue-500 text-sm mt-1 font-medium">Registro obligatorio de ingreso a instalaciones</p>
             </div>
