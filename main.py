@@ -3,8 +3,7 @@ import re
 import secrets
 from datetime import date, datetime
 from typing import Optional
-from email.mime.text import MIMEText
-import smtplib
+import requests
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -42,12 +41,13 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # URL base pública del sistema (para construir los enlaces de aprobación en el correo)
 BASE_URL = os.getenv("BASE_URL", "https://sistema-bioseguridad.onrender.com")
 
-# --- CONFIGURACIÓN DE CORREO (SMTP) ---
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
+# --- CONFIGURACIÓN DE CORREO (API HTTP de Brevo) ---
+# Usamos la API HTTP (puerto 443) en vez de SMTP (puerto 587) porque los planes
+# gratuitos de Render (y de muchos hostings) BLOQUEAN las conexiones salientes
+# por los puertos típicos de SMTP para evitar spam. La API HTTP nunca tiene ese problema.
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+EMAIL_REMITENTE = os.getenv("SMTP_FROM", "notificaciones@invermar.cl")
+NOMBRE_REMITENTE = os.getenv("NOMBRE_REMITENTE", "Sistema de Bioseguridad Invermar")
 
 # --- MAPEO CENTRO -> CORREO DEL JEFE DE CENTRO ---
 # Cada centro tiene su propia variable de entorno en Render. Mientras no configures
@@ -166,11 +166,12 @@ def obtener_correo_jefe(centro: str) -> str:
 
 
 def enviar_correo_aprobacion(registro_id: int, datos: "RegistroIngreso", motivo: str, token: str) -> None:
-    """Envía un correo al jefe de centro con enlaces para aprobar o rechazar el ingreso.
-    Si el envío falla (SMTP no configurado, red caída, etc.), no interrumpe el flujo:
-    el registro queda igualmente guardado como Pendiente_Autorizacion en Supabase."""
-    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD):
-        print("⚠️ SMTP no configurado: no se pudo enviar el correo de aprobación.")
+    """Envía un correo al jefe de centro con enlaces para aprobar o rechazar el ingreso,
+    usando la API HTTP de Brevo (puerto 443, nunca bloqueado por hostings gratuitos).
+    Si el envío falla, no interrumpe el flujo: el registro queda igualmente guardado
+    como Pendiente_Autorizacion en Supabase."""
+    if not BREVO_API_KEY:
+        print("⚠️ BREVO_API_KEY no configurada: no se pudo enviar el correo de aprobación.")
         return
 
     destino = obtener_correo_jefe(datos.centro)
@@ -194,16 +195,28 @@ def enviar_correo_aprobacion(registro_id: int, datos: "RegistroIngreso", motivo:
     </div>
     """
 
-    mensaje = MIMEText(cuerpo_html, "html")
-    mensaje["Subject"] = f"Bioseguridad: solicitud de ingreso pendiente - {datos.nombre_completo}"
-    mensaje["From"] = SMTP_FROM
-    mensaje["To"] = destino
+    payload = {
+        "sender": {"name": NOMBRE_REMITENTE, "email": EMAIL_REMITENTE},
+        "to": [{"email": destino}],
+        "subject": f"Bioseguridad: solicitud de ingreso pendiente - {datos.nombre_completo}",
+        "htmlContent": cuerpo_html,
+    }
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM, [destino], mensaje.as_string())
+        respuesta = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json",
+            },
+            timeout=10,
+        )
+        if respuesta.status_code >= 300:
+            print(f"⚠️ Brevo respondió con error {respuesta.status_code}: {respuesta.text}")
+        else:
+            print(f"✅ Correo de aprobación enviado a {destino}")
     except Exception as e:
         print(f"⚠️ Error enviando correo de aprobación: {e}")
 
