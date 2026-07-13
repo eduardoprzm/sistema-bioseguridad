@@ -1,12 +1,15 @@
 import os
 import re
+import secrets
 from datetime import date, datetime
 from typing import Optional
+from email.mime.text import MIMEText
+import smtplib
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, model_validator
 from supabase import create_client, Client
@@ -35,6 +38,36 @@ app.add_middleware(
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# URL base pública del sistema (para construir los enlaces de aprobación en el correo)
+BASE_URL = os.getenv("BASE_URL", "https://sistema-bioseguridad.onrender.com")
+
+# --- CONFIGURACIÓN DE CORREO (SMTP) ---
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
+
+# --- MAPEO CENTRO -> CORREO DEL JEFE DE CENTRO ---
+# Cada centro tiene su propia variable de entorno en Render. Mientras no configures
+# la variable de un centro específico, cae al correo genérico EMAIL_JEFE_DEFAULT
+# (útil ahora mismo para pruebas: pon tu propio correo en EMAIL_JEFE_DEFAULT y
+# todos los centros te notificarán a ti).
+EMAIL_JEFE_DEFAULT = os.getenv("EMAIL_JEFE_DEFAULT", "bioseguridad@invermar.cl")
+
+JEFES_DE_CENTRO = {
+    "Aucha": os.getenv("EMAIL_JEFE_AUCHA", EMAIL_JEFE_DEFAULT),
+    "Lago verde": os.getenv("EMAIL_JEFE_LAGO_VERDE", EMAIL_JEFE_DEFAULT),
+    "Traiguen I": os.getenv("EMAIL_JEFE_TRAIGUEN_I", EMAIL_JEFE_DEFAULT),
+    "Traiguen II": os.getenv("EMAIL_JEFE_TRAIGUEN_II", EMAIL_JEFE_DEFAULT),
+    "Auchac": os.getenv("EMAIL_JEFE_AUCHAC", EMAIL_JEFE_DEFAULT),
+    "Chulin": os.getenv("EMAIL_JEFE_CHULIN", EMAIL_JEFE_DEFAULT),
+    "Ester": os.getenv("EMAIL_JEFE_ESTER", EMAIL_JEFE_DEFAULT),
+    "Mapue": os.getenv("EMAIL_JEFE_MAPUE", EMAIL_JEFE_DEFAULT),
+    "Nayahue": os.getenv("EMAIL_JEFE_NAYAHUE", EMAIL_JEFE_DEFAULT),
+    "Tepun": os.getenv("EMAIL_JEFE_TEPUN", EMAIL_JEFE_DEFAULT),
+}
 
 
 # ============================================================
@@ -120,21 +153,93 @@ class RegistroIngreso(BaseModel):
 async def manejar_errores_validacion(request: Request, exc: RequestValidationError):
     primer_error = exc.errors()[0]
     mensaje = primer_error.get("msg", "Datos inválidos.")
-    # Pydantic v2 antepone "Value error, " a los mensajes lanzados con raise ValueError
     mensaje = mensaje.replace("Value error, ", "")
     return JSONResponse(status_code=400, content={"detail": mensaje})
+
+
+# ============================================================
+# 📧 ENVÍO DE CORREO DE APROBACIÓN AL JEFE DE CENTRO
+# ============================================================
+
+def obtener_correo_jefe(centro: str) -> str:
+    return JEFES_DE_CENTRO.get(centro, EMAIL_JEFE_DEFAULT)
+
+
+def enviar_correo_aprobacion(registro_id: int, datos: "RegistroIngreso", motivo: str, token: str) -> None:
+    """Envía un correo al jefe de centro con enlaces para aprobar o rechazar el ingreso.
+    Si el envío falla (SMTP no configurado, red caída, etc.), no interrumpe el flujo:
+    el registro queda igualmente guardado como Pendiente_Autorizacion en Supabase."""
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD):
+        print("⚠️ SMTP no configurado: no se pudo enviar el correo de aprobación.")
+        return
+
+    destino = obtener_correo_jefe(datos.centro)
+    link_aprobar = f"{BASE_URL}/api/aprobar/{registro_id}?token={token}"
+    link_rechazar = f"{BASE_URL}/api/rechazar/{registro_id}?token={token}"
+
+    cuerpo_html = f"""
+    <div style="font-family: Arial, sans-serif; color:#1e293b;">
+        <h2 style="color:#2563eb;">Solicitud de ingreso pendiente</h2>
+        <p><b>Nombre:</b> {datos.nombre_completo}</p>
+        <p><b>RUT/Documento:</b> {datos.rut}</p>
+        <p><b>Empresa:</b> {datos.empresa}</p>
+        <p><b>Centro solicitado:</b> {datos.centro}</p>
+        <p><b>Motivo de la alerta:</b> {motivo}</p>
+        <div style="margin-top:20px;">
+            <a href="{link_aprobar}" style="background:#16a34a;color:white;padding:10px 20px;
+               text-decoration:none;border-radius:8px;margin-right:10px;">✅ Aprobar</a>
+            <a href="{link_rechazar}" style="background:#dc2626;color:white;padding:10px 20px;
+               text-decoration:none;border-radius:8px;">❌ Rechazar</a>
+        </div>
+    </div>
+    """
+
+    mensaje = MIMEText(cuerpo_html, "html")
+    mensaje["Subject"] = f"Bioseguridad: solicitud de ingreso pendiente - {datos.nombre_completo}"
+    mensaje["From"] = SMTP_FROM
+    mensaje["To"] = destino
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, [destino], mensaje.as_string())
+    except Exception as e:
+        print(f"⚠️ Error enviando correo de aprobación: {e}")
 
 
 # ============================================================
 # 🐟 CONTROL DE ALERTAS POR MOVIMIENTO ENTRE CENTROS
 # ============================================================
 
-def obtener_ultimo_registro_por_rut(rut: str) -> Optional[dict]:
-    """Busca en Supabase el registro más reciente de este RUT (cualquier centro)."""
+def obtener_ultimo_registro_autorizado(rut: str) -> Optional[dict]:
+    """Busca en Supabase la última visita REALMENTE autorizada de este RUT.
+    🔑 CLAVE DEL FIX: solo consideramos estado_acceso = 'Acceso autorizado'.
+    Los intentos rechazados o pendientes NO cuentan como una visita real,
+    así que nunca contaminan la comparación de 'último centro válido'."""
     respuesta = (
         supabase.table("registros_bioseguridad")
         .select("piscicultura, creado_en")
         .eq("rut", rut)
+        .eq("estado_acceso", "Acceso autorizado")
+        .order("creado_en", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if respuesta.data:
+        return respuesta.data[0]
+    return None
+
+
+def obtener_pendiente_sin_resolver(rut: str, centro: str) -> Optional[dict]:
+    """Revisa si ya existe una solicitud 'Pendiente_Autorizacion' sin resolver
+    para este mismo RUT y este mismo centro, para no duplicar correos."""
+    respuesta = (
+        supabase.table("registros_bioseguridad")
+        .select("id, creado_en")
+        .eq("rut", rut)
+        .eq("piscicultura", centro)
+        .eq("estado_acceso", "Pendiente_Autorizacion")
         .order("creado_en", desc=True)
         .limit(1)
         .execute()
@@ -146,13 +251,13 @@ def obtener_ultimo_registro_por_rut(rut: str) -> Optional[dict]:
 
 def evaluar_movimiento_entre_centros(rut: str, centro_actual: str) -> Optional[str]:
     """
-    Revisa el historial real en Supabase para este RUT.
+    Revisa el historial REAL (solo visitas autorizadas) en Supabase para este RUT.
     Retorna un motivo de bloqueo (str) si corresponde restringir el acceso,
     o None si no hay riesgo de movimiento entre centros.
     """
-    ultimo = obtener_ultimo_registro_por_rut(rut)
+    ultimo = obtener_ultimo_registro_autorizado(rut)
     if not ultimo:
-        return None  # Sin historial previo, no hay riesgo de movimiento
+        return None  # Sin historial autorizado previo, no hay riesgo de movimiento
 
     centro_anterior = ultimo["piscicultura"]
 
@@ -163,13 +268,13 @@ def evaluar_movimiento_entre_centros(rut: str, centro_actual: str) -> Optional[s
     try:
         fecha_anterior = datetime.fromisoformat(ultimo["creado_en"]).date()
     except (ValueError, TypeError):
-        return None  # Si el timestamp viene en formato inesperado, no bloqueamos por esto
+        return None
 
     dias_transcurridos = (date.today() - fecha_anterior).days
 
     if dias_transcurridos <= 2:
         return (
-            f"Movimiento entre centros detectado: su último registro fue en "
+            f"Movimiento entre centros detectado: su último ingreso autorizado fue en "
             f"'{centro_anterior}' hace {dias_transcurridos} día(s). Se requiere una "
             f"carencia mínima de 2 días antes de ingresar a '{centro_actual}'."
         )
@@ -195,7 +300,7 @@ async def registrar_ingreso(datos: RegistroIngreso):
         if not datos.ultimo_ingreso_fecha:
             raise HTTPException(status_code=400, detail="La fecha de último ingreso es obligatoria para contratistas.")
 
-    # 2. 🧠 REGLA DE CARENCIA SOBRE FECHA AUTODECLARADA (visitas a centros externos)
+    # 2. 🧠 REGLA DE CARENCIA SOBRE FECHA AUTODECLARADA (bloqueo directo, sin flujo de aprobación)
     if datos.ultimo_ingreso_fecha:
         try:
             fecha_visita = datetime.strptime(datos.ultimo_ingreso_fecha, "%Y-%m-%d").date()
@@ -210,14 +315,64 @@ async def registrar_ingreso(datos: RegistroIngreso):
         except ValueError:
             raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD.")
 
-    # 3. 🐟 CONTROL AUTOMÁTICO DE MOVIMIENTO ENTRE CENTROS (según historial real en Supabase)
+    # 3. 🐟 CONTROL AUTOMÁTICO DE MOVIMIENTO ENTRE CENTROS -> FLUJO DE APROBACIÓN
     if estado_acceso == "Acceso autorizado":
+
+        # 3a. ¿Ya hay una solicitud pendiente sin resolver para este RUT + centro?
+        pendiente = obtener_pendiente_sin_resolver(datos.rut, datos.centro)
+        if pendiente:
+            return JSONResponse(
+                status_code=202,
+                content={
+                    "status": "pendiente",
+                    "message": (
+                        "Ya existe una solicitud de autorización pendiente para su ingreso a "
+                        f"'{datos.centro}'. Por favor espere la confirmación del encargado de centro."
+                    ),
+                },
+            )
+
         motivo_movimiento = evaluar_movimiento_entre_centros(datos.rut, datos.centro)
         if motivo_movimiento:
-            estado_acceso = "Acceso restringido"
-            motivo_bloqueo = motivo_movimiento
+            # En vez de rechazar de inmediato, se guarda como Pendiente_Autorizacion
+            fecha_registro = datos.ultimo_ingreso_fecha if datos.ultimo_ingreso_fecha else "2000-01-01"
+            payload_pendiente = {
+                "piscicultura": datos.centro,
+                "nombre_completo": datos.nombre_completo,
+                "tipo_identificacion": datos.tipo_identificacion,
+                "rut": datos.rut,
+                "email": datos.email,
+                "empresa": datos.empresa,
+                "fecha": fecha_registro,
+                "centro_procedencia": datos.centro_procedencia if not es_invermar else None,
+                "estado_acceso": "Pendiente_Autorizacion",
+                "motivo_bloqueo": motivo_movimiento,
+                "token_aprobacion": secrets.token_urlsafe(32),
+            }
 
-    # 4. 🗄️ PREPARAR PAQUETE PARA SUPABASE
+            try:
+                resultado = supabase.table("registros_bioseguridad").insert(payload_pendiente).execute()
+                registro_id = resultado.data[0]["id"]
+                token = payload_pendiente["token_aprobacion"]
+
+                enviar_correo_aprobacion(registro_id, datos, motivo_movimiento, token)
+
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
+
+            return JSONResponse(
+                status_code=202,
+                content={
+                    "status": "pendiente",
+                    "message": (
+                        "Su ingreso requiere autorización del encargado de centro debido a un "
+                        "movimiento reciente entre centros. Se ha notificado al jefe de centro. "
+                        "Por favor espere confirmación y vuelva a escanear el código QR."
+                    ),
+                },
+            )
+
+    # 4. 🗄️ FLUJO NORMAL: GUARDAR RESULTADO (autorizado o restringido por carencia autodeclarada)
     fecha_registro = datos.ultimo_ingreso_fecha if datos.ultimo_ingreso_fecha else "2000-01-01"
 
     payload = {
@@ -254,3 +409,96 @@ async def registrar_ingreso(datos: RegistroIngreso):
         raise http_err
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
+
+
+# ============================================================
+# 🔑 RESOLUCIÓN: APROBAR / RECHAZAR DESDE EL CORREO
+# ============================================================
+
+def _pagina_html(titulo: str, mensaje: str, color: str) -> HTMLResponse:
+    return HTMLResponse(f"""
+    <html>
+        <head><meta charset="UTF-8"><title>{titulo}</title></head>
+        <body style="font-family: Arial, sans-serif; background:#f0f4f8; display:flex;
+                     align-items:center; justify-content:center; height:100vh; margin:0;">
+            <div style="background:white; padding:40px; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1);
+                        text-align:center; max-width:400px;">
+                <h1 style="color:{color};">{titulo}</h1>
+                <p style="color:#1e293b;">{mensaje}</p>
+            </div>
+        </body>
+    </html>
+    """)
+
+
+@app.get("/api/aprobar/{registro_id}")
+async def aprobar_ingreso(registro_id: int, token: str):
+    respuesta = (
+        supabase.table("registros_bioseguridad")
+        .select("id, estado_acceso, token_aprobacion, nombre_completo, piscicultura")
+        .eq("id", registro_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not respuesta.data:
+        return _pagina_html("Solicitud no encontrada", "Este enlace no corresponde a ninguna solicitud.", "#dc2626")
+
+    registro = respuesta.data[0]
+
+    if registro["estado_acceso"] != "Pendiente_Autorizacion":
+        return _pagina_html(
+            "Solicitud ya resuelta",
+            f"Esta solicitud ya fue procesada anteriormente (estado actual: {registro['estado_acceso']}).",
+            "#f59e0b",
+        )
+
+    if registro["token_aprobacion"] != token:
+        return _pagina_html("Enlace inválido", "El token de seguridad no coincide con esta solicitud.", "#dc2626")
+
+    supabase.table("registros_bioseguridad").update(
+        {"estado_acceso": "Acceso autorizado", "motivo_bloqueo": None}
+    ).eq("id", registro_id).execute()
+
+    return _pagina_html(
+        "✅ Ingreso aprobado",
+        f"Se autorizó el ingreso de {registro['nombre_completo']} a '{registro['piscicultura']}'. "
+        "La persona debe volver a escanear el código QR para completar su registro.",
+        "#16a34a",
+    )
+
+
+@app.get("/api/rechazar/{registro_id}")
+async def rechazar_ingreso(registro_id: int, token: str):
+    respuesta = (
+        supabase.table("registros_bioseguridad")
+        .select("id, estado_acceso, token_aprobacion, nombre_completo, piscicultura")
+        .eq("id", registro_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not respuesta.data:
+        return _pagina_html("Solicitud no encontrada", "Este enlace no corresponde a ninguna solicitud.", "#dc2626")
+
+    registro = respuesta.data[0]
+
+    if registro["estado_acceso"] != "Pendiente_Autorizacion":
+        return _pagina_html(
+            "Solicitud ya resuelta",
+            f"Esta solicitud ya fue procesada anteriormente (estado actual: {registro['estado_acceso']}).",
+            "#f59e0b",
+        )
+
+    if registro["token_aprobacion"] != token:
+        return _pagina_html("Enlace inválido", "El token de seguridad no coincide con esta solicitud.", "#dc2626")
+
+    supabase.table("registros_bioseguridad").update(
+        {"estado_acceso": "Rechazado"}
+    ).eq("id", registro_id).execute()
+
+    return _pagina_html(
+        "❌ Ingreso rechazado",
+        f"Se rechazó el ingreso de {registro['nombre_completo']} a '{registro['piscicultura']}'.",
+        "#dc2626",
+    )
