@@ -199,7 +199,8 @@
             }
         }
 
-        function mostrarPantallaFinal(esExitoso, titulo, mensaje) {
+        function mostrarPantallaFinal(estado, titulo, mensaje) {
+            // estado: 'autorizado' | 'restringido' | 'pendiente'
             const centroActual = document.getElementById('centro').value;
 
             document.getElementById('vista-formulario').classList.add('hidden');
@@ -211,11 +212,18 @@
             document.getElementById('mensaje-resultado').innerText = mensaje;
 
             const iconoContenedor = document.getElementById('icono-resultado');
-            if (esExitoso) {
+
+            if (estado === 'autorizado') {
                 document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-green-600";
                 iconoContenedor.innerHTML = `
                     <div class="bg-green-50 p-4 rounded-full border border-green-200">
                         <svg class="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </div>`;
+            } else if (estado === 'pendiente') {
+                document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-amber-500";
+                iconoContenedor.innerHTML = `
+                    <div class="bg-amber-50 p-4 rounded-full border border-amber-200">
+                        <svg class="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>`;
             } else {
                 document.getElementById('titulo-resultado').className = "text-2xl font-bold tracking-wide uppercase text-red-600";
@@ -258,8 +266,19 @@
 
                 const data = await response.json();
 
-                if (response.ok) {
-                    mostrarPantallaFinal(true, "Acceso Autorizado", data.message);
+                if (response.status === 202) {
+                    mostrarPantallaFinal('pendiente', "Autorización Pendiente", data.message);
+
+                    Swal.fire({
+                        icon: 'info',
+                        title: '<span style="color:#f59e0b;">AUTORIZACIÓN PENDIENTE</span>',
+                        html: `<p class="text-blue-900 text-sm">${data.message}</p>`,
+                        confirmButtonColor: '#f59e0b',
+                        background: '#fff',
+                        color: '#1e293b'
+                    });
+                } else if (response.ok) {
+                    mostrarPantallaFinal('autorizado', "Acceso Autorizado", data.message);
 
                     Swal.fire({
                         icon: 'success',
@@ -270,7 +289,7 @@
                         color: '#1e293b'
                     });
                 } else if (response.status === 403) {
-                    mostrarPantallaFinal(false, "Acceso Restringido", data.detail);
+                    mostrarPantallaFinal('restringido', "Acceso Restringido", data.detail);
 
                     Swal.fire({
                         icon: 'error',
