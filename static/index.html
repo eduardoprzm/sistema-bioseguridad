@@ -137,7 +137,7 @@
                         </label>
                         <div id="wrapper_no_aplica" class="flex items-center mb-3">
                             <input type='checkbox' id='no_aplica_fecha' onchange='manejarCheckboxFecha()' class='w-4 h-4 bg-white border-blue-300 rounded text-blue-600 focus:ring-blue-500'>
-                            <label for='no_aplica_fecha' class='ml-2 text-sm text-blue-700 cursor-pointer select-none font-medium'>No recuerdo / No aplica (Sin visitas recientes)</label>
+                            <label for='no_aplica_fecha' id="label_no_aplica" class='ml-2 text-sm text-blue-700 cursor-pointer select-none font-medium'>No recuerdo / No aplica (Sin visitas recientes)</label>
                         </div>
                         <input type="date" id="ultimo_ingreso_fecha" name="ultimo_ingreso_fecha" required
                             class="w-full min-w-0 bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
@@ -233,14 +233,17 @@
                 wrapperCentroExterno.classList.remove('hidden');
                 tipoInstalacionSelect.required = false;
                 wrapperNoAplica.classList.remove('hidden');
+                document.getElementById('label_no_aplica').innerText = "No recuerdo / No aplica (Sin visitas recientes)";
             } else {
                 labelFecha.innerText = "Ingreso a centro de mar o piscicultura externa";
                 wrapperCentroExterno.classList.remove('hidden');
-                tipoInstalacionSelect.required = true;
-                wrapperNoAplica.classList.add('hidden');
-                checkboxNoAplica.checked = false;
-                fechaInput.disabled = false;
-                fechaInput.required = true;
+                wrapperNoAplica.classList.remove('hidden');
+                document.getElementById('label_no_aplica').innerText = "No aplica (Primera visita a un centro o piscicultura)";
+                if (!checkboxNoAplica.checked) {
+                    tipoInstalacionSelect.required = true;
+                    fechaInput.disabled = false;
+                    fechaInput.required = true;
+                }
             }
         }
 
@@ -306,14 +309,31 @@
         function manejarCheckboxFecha() {
             const checkbox = document.getElementById('no_aplica_fecha');
             const fechaInput = document.getElementById('ultimo_ingreso_fecha');
+            const tipoInstalacionSelect = document.getElementById('tipo_instalacion_anterior');
+            const nombreInstalacionSelect = document.getElementById('nombre_instalacion_anterior');
+            const inputOtro = document.getElementById('instalacion_anterior_otro');
 
             if (checkbox.checked) {
                 fechaInput.value = "";
                 fechaInput.disabled = true;
                 fechaInput.required = false;
+
+                tipoInstalacionSelect.value = "";
+                tipoInstalacionSelect.disabled = true;
+                tipoInstalacionSelect.required = false;
+                manejarTipoInstalacion();
+                nombreInstalacionSelect.disabled = true;
+                inputOtro.disabled = true;
             } else {
                 fechaInput.disabled = false;
                 fechaInput.required = true;
+
+                tipoInstalacionSelect.disabled = false;
+                nombreInstalacionSelect.disabled = false;
+                inputOtro.disabled = false;
+                if (document.getElementById('empresa').value !== "Invermar") {
+                    tipoInstalacionSelect.required = true;
+                }
             }
         }
 
