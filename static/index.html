@@ -230,10 +230,8 @@
 
             if (empresaSeleccionada === "Invermar") {
                 labelFecha.innerText = "Último ingreso a centro de mar Invermar";
-                wrapperCentroExterno.classList.add('hidden');
+                wrapperCentroExterno.classList.remove('hidden');
                 tipoInstalacionSelect.required = false;
-                tipoInstalacionSelect.value = "";
-                manejarTipoInstalacion();
                 wrapperNoAplica.classList.remove('hidden');
             } else {
                 labelFecha.innerText = "Ingreso a centro de mar o piscicultura externa";
