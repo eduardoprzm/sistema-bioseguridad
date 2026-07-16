@@ -111,6 +111,18 @@
                 </div>
 
                 <div id="bloque_ultimo_ingreso" class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4 w-full max-w-full overflow-hidden box-border">
+                    <div class="w-full min-w-0">
+                        <label id="label_fecha" class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
+                            Último ingreso a centro de mar Invermar
+                        </label>
+                        <div id="wrapper_no_aplica" class="flex items-center mb-3">
+                            <input type='checkbox' id='no_aplica_fecha' onchange='manejarCheckboxFecha()' class='w-4 h-4 bg-white border-blue-300 rounded text-blue-600 focus:ring-blue-500'>
+                            <label for='no_aplica_fecha' id="label_no_aplica" class='ml-2 text-sm text-blue-700 cursor-pointer select-none font-medium'>No recuerdo / No aplica (Sin visitas recientes)</label>
+                        </div>
+                        <input type="date" id="ultimo_ingreso_fecha" name="ultimo_ingreso_fecha" required
+                            class="w-full min-w-0 bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
+                    </div>
+
                     <div id="wrapper_centro_externo" class="hidden w-full">
                         <label class="block text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Centro Visitado Anteriormente</label>
 
@@ -129,18 +141,6 @@
 
                         <input type="text" id="instalacion_anterior_otro" name="instalacion_anterior_otro" placeholder="Escriba el nombre..."
                             class="hidden w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
-                    </div>
-
-                    <div class="w-full min-w-0">
-                        <label id="label_fecha" class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
-                            Último ingreso a centro de mar Invermar
-                        </label>
-                        <div id="wrapper_no_aplica" class="flex items-center mb-3">
-                            <input type='checkbox' id='no_aplica_fecha' onchange='manejarCheckboxFecha()' class='w-4 h-4 bg-white border-blue-300 rounded text-blue-600 focus:ring-blue-500'>
-                            <label for='no_aplica_fecha' id="label_no_aplica" class='ml-2 text-sm text-blue-700 cursor-pointer select-none font-medium'>No recuerdo / No aplica (Sin visitas recientes)</label>
-                        </div>
-                        <input type="date" id="ultimo_ingreso_fecha" name="ultimo_ingreso_fecha" required
-                            class="w-full min-w-0 bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
                     </div>
                 </div>
 
