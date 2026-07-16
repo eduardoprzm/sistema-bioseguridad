@@ -117,6 +117,7 @@ class RegistroIngreso(BaseModel):
     tipo_identificacion: str
     rut: str
     email: EmailStr                                # 📧 Valida estructura usuario@dominio.com
+    zona_visita: Optional[str] = None              # "Oficina" o "Unidades Productivas" (informativo)
     empresa: str
     ultimo_ingreso_fecha: Optional[str] = None
     centro_procedencia: Optional[str] = None
@@ -355,9 +356,10 @@ async def registrar_ingreso(datos: RegistroIngreso):
                 "tipo_identificacion": datos.tipo_identificacion,
                 "rut": datos.rut,
                 "email": datos.email,
+                "zona_visita": datos.zona_visita,
                 "empresa": datos.empresa,
                 "fecha": fecha_registro,
-                "centro_procedencia": datos.centro_procedencia if not es_invermar else None,
+                "centro_procedencia": datos.centro_procedencia,
                 "estado_acceso": "Pendiente_Autorizacion",
                 "motivo_bloqueo": motivo_movimiento,
                 "token_aprobacion": secrets.token_urlsafe(32),
@@ -394,9 +396,10 @@ async def registrar_ingreso(datos: RegistroIngreso):
         "tipo_identificacion": datos.tipo_identificacion,
         "rut": datos.rut,
         "email": datos.email,
+        "zona_visita": datos.zona_visita,
         "empresa": datos.empresa,
         "fecha": fecha_registro,
-        "centro_procedencia": datos.centro_procedencia if not es_invermar else None,
+        "centro_procedencia": datos.centro_procedencia,
         "estado_acceso": estado_acceso,
         "motivo_bloqueo": motivo_bloqueo,
     }
