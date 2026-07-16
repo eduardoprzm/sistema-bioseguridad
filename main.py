@@ -166,15 +166,42 @@ def obtener_correo_jefe(centro: str) -> str:
     return JEFES_DE_CENTRO.get(centro, EMAIL_JEFE_DEFAULT)
 
 
-def enviar_correo_aprobacion(registro_id: int, datos: "RegistroIngreso", motivo: str, token: str) -> None:
-    """Envía un correo al jefe de centro con enlaces para aprobar o rechazar el ingreso,
-    usando la API HTTP de Brevo (puerto 443, nunca bloqueado por hostings gratuitos).
-    Si el envío falla, no interrumpe el flujo: el registro queda igualmente guardado
-    como Pendiente_Autorizacion en Supabase."""
+def enviar_correo_generico(destino: str, asunto: str, cuerpo_html: str) -> None:
+    """Función base para enviar cualquier correo vía la API HTTP de Brevo.
+    Nunca lanza excepción hacia arriba: un fallo de envío no debe interrumpir
+    el flujo de registro de ingreso."""
     if not BREVO_API_KEY:
-        print("⚠️ BREVO_API_KEY no configurada: no se pudo enviar el correo de aprobación.")
+        print(f"⚠️ BREVO_API_KEY no configurada: no se pudo enviar correo a {destino}.")
         return
 
+    payload = {
+        "sender": {"name": NOMBRE_REMITENTE, "email": EMAIL_REMITENTE},
+        "to": [{"email": destino}],
+        "subject": asunto,
+        "htmlContent": cuerpo_html,
+    }
+
+    try:
+        respuesta = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json",
+            },
+            timeout=10,
+        )
+        if respuesta.status_code >= 300:
+            print(f"⚠️ Brevo respondió con error {respuesta.status_code}: {respuesta.text}")
+        else:
+            print(f"✅ Correo enviado a {destino}: {asunto}")
+    except Exception as e:
+        print(f"⚠️ Error enviando correo a {destino}: {e}")
+
+
+def enviar_correo_aprobacion(registro_id: int, datos: "RegistroIngreso", motivo: str, token: str) -> None:
+    """Envía un correo al jefe de centro con enlaces para aprobar o rechazar el ingreso."""
     destino = obtener_correo_jefe(datos.centro)
     link_aprobar = f"{BASE_URL}/api/aprobar/{registro_id}?token={token}"
     link_rechazar = f"{BASE_URL}/api/rechazar/{registro_id}?token={token}"
@@ -195,31 +222,60 @@ def enviar_correo_aprobacion(registro_id: int, datos: "RegistroIngreso", motivo:
         </div>
     </div>
     """
+    enviar_correo_generico(
+        destino,
+        f"Bioseguridad: solicitud de ingreso pendiente - {datos.nombre_completo}",
+        cuerpo_html,
+    )
 
-    payload = {
-        "sender": {"name": NOMBRE_REMITENTE, "email": EMAIL_REMITENTE},
-        "to": [{"email": destino}],
-        "subject": f"Bioseguridad: solicitud de ingreso pendiente - {datos.nombre_completo}",
-        "htmlContent": cuerpo_html,
-    }
 
-    try:
-        respuesta = requests.post(
-            "https://api.brevo.com/v3/smtp/email",
-            json=payload,
-            headers={
-                "accept": "application/json",
-                "api-key": BREVO_API_KEY,
-                "content-type": "application/json",
-            },
-            timeout=10,
-        )
-        if respuesta.status_code >= 300:
-            print(f"⚠️ Brevo respondió con error {respuesta.status_code}: {respuesta.text}")
-        else:
-            print(f"✅ Correo de aprobación enviado a {destino}")
-    except Exception as e:
-        print(f"⚠️ Error enviando correo de aprobación: {e}")
+def notificar_jefe_registro(datos: "RegistroIngreso", estado_acceso: str, motivo: Optional[str] = None) -> None:
+    """Notifica al jefe de centro de CUALQUIER ingreso registrado (autorizado o
+    restringido), para que tenga visibilidad de quién entra a su centro,
+    independientemente de si requirió aprobación manual o no."""
+    destino = obtener_correo_jefe(datos.centro)
+
+    color = "#16a34a" if estado_acceso == "Acceso autorizado" else "#dc2626"
+    motivo_html = f"<p><b>Motivo:</b> {motivo}</p>" if motivo else ""
+
+    cuerpo_html = f"""
+    <div style="font-family: Arial, sans-serif; color:#1e293b;">
+        <h2 style="color:{color};">Registro de ingreso: {estado_acceso}</h2>
+        <p><b>Nombre:</b> {datos.nombre_completo}</p>
+        <p><b>RUT/Documento:</b> {datos.rut}</p>
+        <p><b>Empresa:</b> {datos.empresa}</p>
+        <p><b>Centro:</b> {datos.centro}</p>
+        <p><b>Zona a visitar:</b> {datos.zona_visita or "No especificada"}</p>
+        {motivo_html}
+    </div>
+    """
+    enviar_correo_generico(
+        destino,
+        f"Bioseguridad: {estado_acceso} - {datos.nombre_completo} ({datos.centro})",
+        cuerpo_html,
+    )
+
+
+def notificar_visitante(destino: str, nombre: str, centro: str, estado_acceso: str, mensaje: str) -> None:
+    """Envía al visitante una copia por correo del resultado de su declaración sanitaria."""
+    color = "#16a34a" if estado_acceso == "Acceso autorizado" else (
+        "#f59e0b" if estado_acceso == "Pendiente_Autorizacion" else "#dc2626"
+    )
+    titulo = {
+        "Acceso autorizado": "Acceso autorizado",
+        "Pendiente_Autorizacion": "Autorización pendiente",
+        "Acceso restringido": "Acceso restringido",
+    }.get(estado_acceso, estado_acceso)
+
+    cuerpo_html = f"""
+    <div style="font-family: Arial, sans-serif; color:#1e293b;">
+        <h2 style="color:{color};">{titulo}</h2>
+        <p>Hola {nombre},</p>
+        <p>{mensaje}</p>
+        <p style="color:#64748b; font-size:13px; margin-top:20px;">Instalación: {centro}</p>
+    </div>
+    """
+    enviar_correo_generico(destino, f"Bioseguridad Invermar: {titulo} - {centro}", cuerpo_html)
 
 
 # ============================================================
@@ -336,6 +392,7 @@ async def registrar_ingreso(datos: RegistroIngreso):
                 status_code=202,
                 content={
                     "status": "pendiente",
+                    "id": pendiente["id"],
                     "message": (
                         "Ya existe una solicitud de autorización pendiente para su ingreso a "
                         f"'{datos.centro}'. Por favor espere la confirmación del encargado de centro."
@@ -368,6 +425,12 @@ async def registrar_ingreso(datos: RegistroIngreso):
                 token = payload_pendiente["token_aprobacion"]
 
                 enviar_correo_aprobacion(registro_id, datos, motivo_movimiento, token)
+                notificar_visitante(
+                    datos.email, datos.nombre_completo, datos.centro, "Pendiente_Autorizacion",
+                    "Recibimos su declaración sanitaria. Debido a un movimiento reciente entre "
+                    "centros, su ingreso requiere autorización del encargado de centro. Le "
+                    "avisaremos apenas se resuelva.",
+                )
 
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
@@ -376,6 +439,7 @@ async def registrar_ingreso(datos: RegistroIngreso):
                 status_code=202,
                 content={
                     "status": "pendiente",
+                    "id": registro_id,
                     "message": (
                         "Su ingreso requiere autorización del encargado de centro debido a un "
                         "movimiento reciente entre centros. Se ha notificado al jefe de centro. "
@@ -404,7 +468,13 @@ async def registrar_ingreso(datos: RegistroIngreso):
     try:
         supabase.table("registros_bioseguridad").insert(payload).execute()
 
+        notificar_jefe_registro(datos, estado_acceso, motivo_bloqueo)
+
         if estado_acceso == "Acceso restringido":
+            notificar_visitante(
+                datos.email, datos.nombre_completo, datos.centro, estado_acceso,
+                motivo_bloqueo or "Su acceso a las unidades productivas ha sido restringido por bioseguridad.",
+            )
             raise HTTPException(
                 status_code=403,
                 detail=motivo_bloqueo or (
@@ -412,6 +482,11 @@ async def registrar_ingreso(datos: RegistroIngreso):
                     "El tránsito se limita exclusivamente a las oficinas. Su visita será guiada."
                 ),
             )
+
+        notificar_visitante(
+            datos.email, datos.nombre_completo, datos.centro, estado_acceso,
+            "Su ingreso ha sido autorizado. Su visita será guiada por el Jefe de Centro o por el encargado.",
+        )
 
         return {
             "status": "success",
@@ -448,7 +523,7 @@ def _pagina_html(titulo: str, mensaje: str, color: str) -> HTMLResponse:
 async def aprobar_ingreso(registro_id: int, token: str):
     respuesta = (
         supabase.table("registros_bioseguridad")
-        .select("id, estado_acceso, token_aprobacion, nombre_completo, piscicultura")
+        .select("id, estado_acceso, token_aprobacion, nombre_completo, piscicultura, email")
         .eq("id", registro_id)
         .limit(1)
         .execute()
@@ -469,9 +544,16 @@ async def aprobar_ingreso(registro_id: int, token: str):
     if registro["token_aprobacion"] != token:
         return _pagina_html("Enlace inválido", "El token de seguridad no coincide con esta solicitud.", "#dc2626")
 
+    correo_encargado = obtener_correo_jefe(registro["piscicultura"])
+
     supabase.table("registros_bioseguridad").update(
-        {"estado_acceso": "Acceso autorizado", "motivo_bloqueo": None}
+        {"estado_acceso": "Acceso autorizado", "motivo_bloqueo": None, "autorizado_por": correo_encargado}
     ).eq("id", registro_id).execute()
+
+    notificar_visitante(
+        registro["email"], registro["nombre_completo"], registro["piscicultura"], "Acceso autorizado",
+        "Su ingreso fue aprobado por el encargado de centro. Ya puede continuar con su visita.",
+    )
 
     return _pagina_html(
         "✅ Ingreso aprobado",
@@ -486,7 +568,7 @@ async def aprobar_ingreso(registro_id: int, token: str):
 async def rechazar_ingreso(registro_id: int, token: str):
     respuesta = (
         supabase.table("registros_bioseguridad")
-        .select("id, estado_acceso, token_aprobacion, nombre_completo, piscicultura")
+        .select("id, estado_acceso, token_aprobacion, nombre_completo, piscicultura, email")
         .eq("id", registro_id)
         .limit(1)
         .execute()
@@ -507,12 +589,53 @@ async def rechazar_ingreso(registro_id: int, token: str):
     if registro["token_aprobacion"] != token:
         return _pagina_html("Enlace inválido", "El token de seguridad no coincide con esta solicitud.", "#dc2626")
 
+    correo_encargado = obtener_correo_jefe(registro["piscicultura"])
+
     supabase.table("registros_bioseguridad").update(
-        {"estado_acceso": "Rechazado"}
+        {"estado_acceso": "Rechazado", "autorizado_por": correo_encargado}
     ).eq("id", registro_id).execute()
+
+    notificar_visitante(
+        registro["email"], registro["nombre_completo"], registro["piscicultura"], "Acceso restringido",
+        "Su ingreso fue rechazado por el encargado de centro. Si tiene dudas, contacte a su anfitrión en Invermar.",
+    )
 
     return _pagina_html(
         "❌ Ingreso rechazado",
         f"Se rechazó el ingreso de {registro['nombre_completo']} a '{registro['piscicultura']}'.",
         "#dc2626",
     )
+
+
+# ============================================================
+# 🔄 CONSULTA DE ESTADO (para que el visitante vea la resolución en vivo)
+# ============================================================
+
+@app.get("/api/estado/{registro_id}")
+async def consultar_estado(registro_id: int):
+    """Endpoint de solo lectura para que la pantalla de 'Autorización Pendiente'
+    del visitante consulte periódicamente si el jefe de centro ya resolvió su solicitud."""
+    respuesta = (
+        supabase.table("registros_bioseguridad")
+        .select("id, estado_acceso, motivo_bloqueo, piscicultura")
+        .eq("id", registro_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not respuesta.data:
+        raise HTTPException(status_code=404, detail="Registro no encontrado.")
+
+    registro = respuesta.data[0]
+
+    mensajes = {
+        "Pendiente_Autorizacion": "Su solicitud sigue pendiente de autorización.",
+        "Acceso autorizado": "Su ingreso fue aprobado por el encargado de centro. Ya puede continuar con su visita.",
+        "Rechazado": "Su ingreso fue rechazado por el encargado de centro.",
+        "Acceso restringido": "Su ingreso fue restringido.",
+    }
+
+    return {
+        "estado_acceso": registro["estado_acceso"],
+        "message": mensajes.get(registro["estado_acceso"], registro["estado_acceso"]),
+    }
