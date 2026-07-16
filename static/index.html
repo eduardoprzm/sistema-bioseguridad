@@ -65,7 +65,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Tipo Identificación</label>
-                        <select id="tipo_identificacion" name="tipo_identificacion" required 
+                        <select id="tipo_identificacion" name="tipo_identificacion" required onchange="manejarTipoIdentificacion()"
                             class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:outline-none box-border">
                             <option value="RUT">RUT</option>
                             <option value="Pasaporte">Pasaporte</option>
@@ -76,7 +76,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">RUT / Documento</label>
-                        <input type="text" id="rut" name="rut" required 
+                        <input type="text" id="rut" name="rut" required inputmode="text" placeholder="12.345.678-9"
+                            oninput="formatearCampoRut(this)"
                             class="w-full bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-blue-950 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none box-border">
                     </div>
                     <div>
@@ -186,6 +187,37 @@
             }
             manejarFlujoEmpresa();
         });
+
+        function formatearCampoRut(input) {
+            const tipo = document.getElementById('tipo_identificacion').value;
+            if (tipo !== 'RUT') return; // Pasaporte: se deja tal cual, sin formatear
+
+            let limpio = input.value.replace(/[^0-9kK]/g, '').toUpperCase();
+            limpio = limpio.slice(0, 9); // máximo 8 dígitos + 1 dígito verificador
+
+            if (limpio.length === 0) {
+                input.value = '';
+                return;
+            }
+
+            const cuerpo = limpio.slice(0, -1);
+            const dv = limpio.slice(-1);
+            const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+            input.value = cuerpoFormateado ? `${cuerpoFormateado}-${dv}` : dv;
+        }
+
+        function manejarTipoIdentificacion() {
+            const tipo = document.getElementById('tipo_identificacion').value;
+            const rutInput = document.getElementById('rut');
+
+            if (tipo === 'RUT') {
+                rutInput.placeholder = '12.345.678-9';
+                formatearCampoRut(rutInput);
+            } else {
+                rutInput.placeholder = 'Número de pasaporte';
+            }
+        }
 
         function manejarFlujoEmpresa() {
             const empresaSeleccionada = document.getElementById('empresa').value;
