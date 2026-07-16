@@ -305,14 +305,11 @@ async def registrar_ingreso(datos: RegistroIngreso):
     estado_acceso = "Acceso autorizado"
     motivo_bloqueo = None
 
-    # 1. 🏭 VALIDACIÓN SEGÚN TIPO DE EMPRESA
+    # 1. 🏭 IDENTIFICAR TIPO DE EMPRESA
     es_invermar = datos.empresa.lower() == "invermar"
-
-    if not es_invermar:
-        if not datos.centro_procedencia or not datos.centro_procedencia.strip():
-            raise HTTPException(status_code=400, detail="El nombre del centro externo es obligatorio para contratistas.")
-        if not datos.ultimo_ingreso_fecha:
-            raise HTTPException(status_code=400, detail="La fecha de último ingreso es obligatoria para contratistas.")
+    # Nota: centro_procedencia y ultimo_ingreso_fecha ya no son obligatorios para
+    # contratistas externos, porque el formulario ahora permite marcar "No aplica"
+    # cuando es su primera visita a un centro o piscicultura (sin historial previo).
 
     # 2. 🧠 REGLA DE CARENCIA SOBRE FECHA AUTODECLARADA (bloqueo directo, sin flujo de aprobación)
     if datos.ultimo_ingreso_fecha:
