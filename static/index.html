@@ -219,6 +219,37 @@
             }
         }
 
+        function iniciarSondeoEstado(registroId) {
+            let intentos = 0;
+            const MAX_INTENTOS = 180; // 180 x 5s = 15 minutos máximo sondeando
+
+            const intervalo = setInterval(async () => {
+                intentos++;
+                if (intentos > MAX_INTENTOS) {
+                    clearInterval(intervalo);
+                    return;
+                }
+
+                try {
+                    const resp = await fetch(`${API_URL}/api/estado/${registroId}`);
+                    if (!resp.ok) return;
+
+                    const data = await resp.json();
+
+                    if (data.estado_acceso === 'Acceso autorizado') {
+                        clearInterval(intervalo);
+                        mostrarPantallaFinal('autorizado', "Acceso Autorizado", data.message);
+                    } else if (data.estado_acceso === 'Rechazado' || data.estado_acceso === 'Acceso restringido') {
+                        clearInterval(intervalo);
+                        mostrarPantallaFinal('restringido', "Acceso Restringido", data.message);
+                    }
+                    // Si sigue "Pendiente_Autorizacion", no hacemos nada y seguimos sondeando
+                } catch (error) {
+                    // Error de red puntual: se ignora, se reintenta en el próximo ciclo
+                }
+            }, 5000);
+        }
+
         function manejarFlujoEmpresa() {
             const empresaSeleccionada = document.getElementById('empresa').value;
             const wrapperCentroExterno = document.getElementById('wrapper_centro_externo');
@@ -416,6 +447,10 @@
                         background: '#fff',
                         color: '#1e293b'
                     });
+
+                    if (data.id) {
+                        iniciarSondeoEstado(data.id);
+                    }
                 } else if (response.ok) {
                     mostrarPantallaFinal('autorizado', "Acceso Autorizado", data.message);
 
